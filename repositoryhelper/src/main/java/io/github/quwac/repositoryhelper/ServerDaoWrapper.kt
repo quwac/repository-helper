@@ -7,3 +7,4 @@ interface ServerDaoWrapper<QUERY, ENTITY, WRITE_RESULT> {
 }
 
 interface DefaultServerDaoWrapper<QUERY, ENTITY> : ServerDaoWrapper<QUERY, ENTITY, Any>
+interface UnitServerDaoWrapper<QUERY, ENTITY> : ServerDaoWrapper<QUERY, ENTITY, Unit>

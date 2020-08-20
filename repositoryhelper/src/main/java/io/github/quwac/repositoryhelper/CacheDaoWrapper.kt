@@ -11,3 +11,6 @@ interface CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, WRITE_RESULT> {
 
 interface DefaultCacheDaoWrapper<QUERY, ENTITY, READ_RESULT> :
     CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, Any>
+
+interface UnitCacheDaoWrapper<QUERY, ENTITY, READ_RESULT> :
+    CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, Unit>
