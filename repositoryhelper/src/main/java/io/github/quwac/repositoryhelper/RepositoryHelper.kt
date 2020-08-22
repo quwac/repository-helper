@@ -56,6 +56,21 @@ class RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WR
                 queryToHash = queryToHash
             )
 
+        fun <QUERY, ENTITY, RESULT> build(
+            cacheDao: UnitCacheDaoWrapper<QUERY, ENTITY, RESULT>,
+            serverDao: UnitServerDaoWrapper<QUERY, ENTITY>,
+            onErrorReturn: (RESULT, Throwable) -> RESULT
+        ): RepositoryHelper<QUERY, ENTITY, RESULT, Unit, Unit> = build(
+            selectFlowFromCache = cacheDao::selectFlow,
+            selectRawFromCache = cacheDao::selectRaw,
+            selectRawFromServer = serverDao::select,
+            upsertToCache = cacheDao::upsert,
+            upsertToServer = serverDao::upsert,
+            deleteFromCache = cacheDao::delete,
+            deleteFromServer = serverDao::delete,
+            onErrorReturn = onErrorReturn
+        )
+
         fun <QUERY, ENTITY, READ_RESULT> build(
             coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO,
             cacheDao: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, Any>,
