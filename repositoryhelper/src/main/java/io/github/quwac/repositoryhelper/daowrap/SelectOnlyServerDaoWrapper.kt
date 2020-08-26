@@ -15,7 +15,7 @@ fun <QUERY, ENTITY> SelectOnlyServerDaoWrapper<QUERY, ENTITY>.toServerDaoWrapper
     }
 
     override suspend fun select(query: QUERY): ENTITY? {
-        return select(query)
+        return (this@toServerDaoWrapper).select(query)
     }
 
 }

@@ -7,7 +7,7 @@ interface NoQuerySelectOnlyServerDaoWrapper<ENTITY> {
 fun <ENTITY> NoQuerySelectOnlyServerDaoWrapper<ENTITY>.toServerDaoWrapper() =
     object : ServerDaoWrapper<Unit, ENTITY> {
         override suspend fun select(query: Unit): ENTITY? {
-            return select()
+            return (this@toServerDaoWrapper).select()
         }
 
         override suspend fun upsert(entity: ENTITY) {

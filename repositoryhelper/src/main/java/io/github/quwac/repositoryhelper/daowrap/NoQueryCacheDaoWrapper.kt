@@ -12,19 +12,19 @@ interface NoQueryCacheDaoWrapper<ENTITY, READ_RESULT> {
 fun <ENTITY, READ_RESULT> NoQueryCacheDaoWrapper<ENTITY, READ_RESULT>.toCacheDaoWrapper() =
     object : CacheDaoWrapper<Unit, ENTITY, READ_RESULT> {
         override fun selectFlow(query: Unit): Flow<READ_RESULT> {
-            return selectFlow()
+            return (this@toCacheDaoWrapper).selectFlow()
         }
 
         override suspend fun selectRaw(query: Unit): ENTITY? {
-            return selectRaw()
+            return (this@toCacheDaoWrapper).selectRaw()
         }
 
         override suspend fun upsert(entity: ENTITY) {
-            return upsert(entity)
+            return (this@toCacheDaoWrapper).upsert(entity)
         }
 
         override suspend fun deleteByQuery(query: Unit) {
-            deleteAll()
+            (this@toCacheDaoWrapper).deleteAll()
         }
 
     }
