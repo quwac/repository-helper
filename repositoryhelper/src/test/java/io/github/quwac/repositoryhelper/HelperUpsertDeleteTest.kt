@@ -2,6 +2,8 @@ package io.github.quwac.repositoryhelper
 
 import android.os.Build
 import com.google.common.truth.Truth.assertThat
+import io.github.quwac.repositoryhelper.daowrap.CacheDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.ServerDaoWrapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -40,28 +42,28 @@ class HelperUpsertDeleteTest {
 
         val user = NEW
 
-        val upsertResult = RepositoryHelper.buildCustomWriteResult(
-            cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+        val upsertResult = RepositoryHelperImpl.build(
+            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     throw UnsupportedOperationException()
 
                 override suspend fun selectRaw(query: Long): User? =
                     cache.selectUserSuspend(query)
 
-                override suspend fun upsert(entity: User): Boolean =
-                    cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) =
+                    cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long): Boolean =
+                override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? =
                     throw UnsupportedOperationException()
 
                 override suspend fun upsert(entity: User) =
-                    server.upsertUsers(entity)
+                    server.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) =
+                override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
 
             },
@@ -70,7 +72,6 @@ class HelperUpsertDeleteTest {
             }
         ).upsert(user.id, user)
 
-        assertThat(upsertResult).isEqualTo(true)
         assertThat(cache.selectUserNullableSuspend(user.id)).isEqualTo(user)
         assertThat(server.selectUserNullableSuspend(user.id)).isEqualTo(user)
     }
@@ -82,28 +83,28 @@ class HelperUpsertDeleteTest {
 
         val user = NEW
 
-        val upsertResult = RepositoryHelper.buildCustomWriteResult(
-            cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+        val upsertResult = RepositoryHelperImpl.build(
+            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     throw UnsupportedOperationException()
 
                 override suspend fun selectRaw(query: Long): User? =
                     cache.selectUserNullableSuspend(query)
 
-                override suspend fun upsert(entity: User): Boolean =
-                    cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) =
+                    cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long): Boolean =
-                    cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) =
+                    cache.deleteUsers(query).toUnit()
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? =
                     throw UnsupportedOperationException()
 
                 override suspend fun upsert(entity: User) =
-                    server.upsertUsers(entity)
+                    server.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) =
+                override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
 
             },
@@ -112,7 +113,6 @@ class HelperUpsertDeleteTest {
             }
         ).upsert(user.id, user)
 
-        assertThat(upsertResult).isEqualTo(true)
         assertThat(cache.selectUserNullableSuspend(user.id)).isEqualTo(user)
         assertThat(server.selectUserNullableSuspend(user.id)).isEqualTo(user)
     }
@@ -126,21 +126,21 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val upsertResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
-                        cache.upsertUsers(entity)
+                    override suspend fun upsert(entity: User) =
+                        cache.upsertUsers(entity).toUnit()
 
-                    override suspend fun delete(query: Long): Boolean =
+                    override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -149,7 +149,7 @@ class HelperUpsertDeleteTest {
                         throw t
                     }
 
-                    override suspend fun delete(query: Long) =
+                    override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
 
                 },
@@ -189,21 +189,21 @@ class HelperUpsertDeleteTest {
         val user = NEW
 
         val upsertResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserNullableSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
-                        cache.upsertUsers(entity)
+                    override suspend fun upsert(entity: User) =
+                        cache.upsertUsers(entity).toUnit()
 
-                    override suspend fun delete(query: Long): Boolean =
-                        cache.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        cache.deleteUsers(query).toUnit()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -211,7 +211,7 @@ class HelperUpsertDeleteTest {
                         throw RuntimeException()
                     }
 
-                    override suspend fun delete(query: Long) =
+                    override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
 
                 },
@@ -248,29 +248,29 @@ class HelperUpsertDeleteTest {
         val server = UserDaoImpl(OLD, 0, "server")
 
         val deleteResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserNullableSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
+                    override suspend fun upsert(entity: User) =
                         throw UnsupportedOperationException()
 
-                    override suspend fun delete(query: Long): Boolean =
-                        cache.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        cache.deleteUsers(query).toUnit()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
                     override suspend fun upsert(entity: User) =
-                        server.upsertUsers(entity)
+                        server.upsertUsers(entity).toUnit()
 
-                    override suspend fun delete(query: Long) =
-                        server.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        server.deleteUsers(query).toUnit()
 
                 },
                 onErrorReturn = { _, _ ->
@@ -279,15 +279,19 @@ class HelperUpsertDeleteTest {
             ).delete(OLD.id)
         }
 
-        var result: Boolean? = null
+        var result = true
         val job = launch {
-            result = deleteResultFunc()
+            try {
+                deleteResultFunc()
+            } catch (t: Throwable) {
+                result = false
+            }
         }
         delay(1000)
         job.cancel()
 
         outputLog()
-        assertThat(result!!).isEqualTo(true)
+        assertThat(result).isEqualTo(true)
         assertThat(cache.selectUserNullableSuspend(OLD.id)).isEqualTo(null)
         assertThat(server.selectUserNullableSuspend(OLD.id)).isEqualTo(null)
     }
@@ -298,29 +302,29 @@ class HelperUpsertDeleteTest {
         val server = UserDaoImpl(null, 0, "server")
 
         val deleteResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserNullableSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
+                    override suspend fun upsert(entity: User) =
                         throw UnsupportedOperationException()
 
-                    override suspend fun delete(query: Long): Boolean =
-                        cache.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        cache.deleteUsers(query).toUnit()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
                     override suspend fun upsert(entity: User) =
                         throw UnsupportedOperationException()
 
-                    override suspend fun delete(query: Long) =
-                        server.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        server.deleteUsers(query).toUnit()
 
                 },
                 onErrorReturn = { _, _ ->
@@ -329,15 +333,19 @@ class HelperUpsertDeleteTest {
             ).delete(OLD.id)
         }
 
-        var result: Boolean? = null
+        var result = true
         val job = launch {
-            result = deleteResultFunc()
+            try {
+                deleteResultFunc()
+            } catch (t: Throwable) {
+                result = false
+            }
         }
         delay(1000)
         job.cancel()
 
         outputLog()
-        assertThat(result!!).isEqualTo(true)
+        assertThat(result).isEqualTo(true)
         assertThat(cache.selectUserNullableSuspend(OLD.id)).isEqualTo(null)
         assertThat(server.selectUserNullableSuspend(OLD.id)).isEqualTo(null)
     }
@@ -349,28 +357,28 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val deleteResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserNullableSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
-                        cache.upsertUsers(entity)
+                    override suspend fun upsert(entity: User) =
+                        cache.upsertUsers(entity).toUnit()
 
-                    override suspend fun delete(query: Long): Boolean =
-                        cache.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        cache.deleteUsers(query).toUnit()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
                     override suspend fun upsert(entity: User) =
                         throw UnsupportedOperationException()
 
-                    override suspend fun delete(query: Long) =
+                    override suspend fun deleteByQuery(query: Long) =
                         throw t
 
                 },
@@ -410,28 +418,28 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val deleteResultFunc = suspend {
-            RepositoryHelper.buildCustomWriteResult(
-                cacheDao = object : CacheDaoWrapper<Long, User, Result<User>, Boolean> {
+            RepositoryHelperImpl.build(
+                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
                     override suspend fun selectRaw(query: Long): User? =
                         cache.selectUserNullableSuspend(query)
 
-                    override suspend fun upsert(entity: User): Boolean =
-                        cache.upsertUsers(entity)
+                    override suspend fun upsert(entity: User) =
+                        cache.upsertUsers(entity).toUnit()
 
-                    override suspend fun delete(query: Long): Boolean =
-                        cache.deleteUsers(query)
+                    override suspend fun deleteByQuery(query: Long) =
+                        cache.deleteUsers(query).toUnit()
                 },
-                serverDao = object : DefaultServerDaoWrapper<Long, User> {
+                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
                     override suspend fun upsert(entity: User) =
                         throw UnsupportedOperationException()
 
-                    override suspend fun delete(query: Long) =
+                    override suspend fun deleteByQuery(query: Long) =
                         throw t
 
                 },

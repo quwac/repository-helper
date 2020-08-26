@@ -1,5 +1,12 @@
 package io.github.quwac.repositoryhelper
 
+import io.github.quwac.repositoryhelper.daowrap.CacheDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.NoQueryCacheDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.NoQuerySelectOnlyServerDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.SelectOnlyServerDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.ServerDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.toCacheDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.toServerDaoWrapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
@@ -10,121 +17,75 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
 @Suppress("EXPERIMENTAL_API_USAGE")
-class RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WRITE_RESULT> private constructor(
-    private val coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO,
-    private val selectFlowFromCache: SelectFlow<QUERY, READ_RESULT>,
-    private val selectRawFromCache: SelectRaw<QUERY, ENTITY>,
-    private val selectRawFromServer: SelectRaw<QUERY, ENTITY>,
-    private val upsertToCache: Upsert<ENTITY, CACHE_WRITE_RESULT>,
-    private val upsertToServer: Upsert<ENTITY, SERVER_WRITE_RESULT>,
-    private val deleteFromCache: Delete<QUERY, CACHE_WRITE_RESULT>,
-    private val deleteFromServer: Delete<QUERY, SERVER_WRITE_RESULT>,
+class RepositoryHelper<QUERY, ENTITY, READ_RESULT> private constructor(
+    private val cacheDaoWrapper: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT>,
+    private val serverDaoWrapper: ServerDaoWrapper<QUERY, ENTITY>,
     private val onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT,
-    private val remoteAccessManager: RemoteAccessManager = RemoteAccessManager(
-        3000
-    ),
-    private val queryToHash: QueryToHash<QUERY> = { it.toString() }
+    private val coroutineContext: CoroutineContext,
+    private val remoteAccessManager: RemoteAccessManager,
+    private val selectQueryToHash: QueryToHash<QUERY>
 ) {
     companion object {
-        @Suppress("MemberVisibilityCanBePrivate")
-        fun <QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WRITE_RESULT> build(
-            coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO,
-            selectFlowFromCache: SelectFlow<QUERY, READ_RESULT>,
-            selectRawFromCache: SelectRaw<QUERY, ENTITY>,
-            selectRawFromServer: SelectRaw<QUERY, ENTITY>,
-            upsertToCache: Upsert<ENTITY, CACHE_WRITE_RESULT>,
-            upsertToServer: Upsert<ENTITY, SERVER_WRITE_RESULT>,
-            deleteFromCache: Delete<QUERY, CACHE_WRITE_RESULT>,
-            deleteFromServer: Delete<QUERY, SERVER_WRITE_RESULT>,
-            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT,
-            remoteAccessManager: RemoteAccessManager = RemoteAccessManager(
-                3000
-            ),
-            queryToHash: QueryToHash<QUERY> = { it.toString() }
-        ): RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WRITE_RESULT> =
-            RepositoryHelper(
-                coroutineContext = coroutineContext,
-                selectFlowFromCache = selectFlowFromCache,
-                selectRawFromCache = selectRawFromCache,
-                selectRawFromServer = selectRawFromServer,
-                upsertToCache = upsertToCache,
-                upsertToServer = upsertToServer,
-                deleteFromCache = deleteFromCache,
-                deleteFromServer = deleteFromServer,
-                onErrorReturn = onErrorReturn,
-                remoteAccessManager = remoteAccessManager,
-                queryToHash = queryToHash
-            )
-
-        fun <QUERY, ENTITY, RESULT> build(
-            cacheDao: UnitCacheDaoWrapper<QUERY, ENTITY, RESULT>,
-            serverDao: UnitServerDaoWrapper<QUERY, ENTITY>,
-            onErrorReturn: (RESULT, Throwable) -> RESULT
-        ): RepositoryHelper<QUERY, ENTITY, RESULT, Unit, Unit> = build(
-            selectFlowFromCache = cacheDao::selectFlow,
-            selectRawFromCache = cacheDao::selectRaw,
-            selectRawFromServer = serverDao::select,
-            upsertToCache = cacheDao::upsert,
-            upsertToServer = serverDao::upsert,
-            deleteFromCache = cacheDao::delete,
-            deleteFromServer = serverDao::delete,
+        fun <QUERY, ENTITY, READ_RESULT> builder(
+            cacheDaoWrapper: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT>,
+            serverDaoWrapper: ServerDaoWrapper<QUERY, ENTITY>,
+            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT
+        ) = Builder(
+            cacheDaoWrapper = cacheDaoWrapper,
+            serverDaoWrapper = serverDaoWrapper,
             onErrorReturn = onErrorReturn
         )
 
-        fun <QUERY, ENTITY, READ_RESULT> build(
-            coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO,
-            cacheDao: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, Any>,
-            serverDao: ServerDaoWrapper<QUERY, ENTITY, Any>,
-            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT,
-            remoteAccessManager: RemoteAccessManager = RemoteAccessManager(
-                3000
-            ),
-            queryToHash: QueryToHash<QUERY> = { it.toString() }
-        ): RepositoryHelper<QUERY, ENTITY, READ_RESULT, Any, Any> = build(
-            coroutineContext = coroutineContext,
-            selectFlowFromCache = cacheDao::selectFlow,
-            selectRawFromCache = cacheDao::selectRaw,
-            selectRawFromServer = serverDao::select,
-            upsertToCache = cacheDao::upsert,
-            upsertToServer = serverDao::upsert,
-            deleteFromCache = cacheDao::delete,
-            deleteFromServer = serverDao::delete,
-            onErrorReturn = onErrorReturn,
-            remoteAccessManager = remoteAccessManager,
-            queryToHash = queryToHash
+        fun <ENTITY, READ_RESULT> builder(
+            noQueryCacheDaoWrapper: NoQueryCacheDaoWrapper<ENTITY, READ_RESULT>,
+            noQuerySelectOnlyServerDaoWrapper: NoQuerySelectOnlyServerDaoWrapper<ENTITY>,
+            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT
+        ) = Builder(
+            cacheDaoWrapper = noQueryCacheDaoWrapper.toCacheDaoWrapper(),
+            serverDaoWrapper = noQuerySelectOnlyServerDaoWrapper.toServerDaoWrapper(),
+            onErrorReturn = onErrorReturn
         )
 
-        fun <QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WRITE_RESULT> buildCustomWriteResult(
-            coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO,
-            cacheDao: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT>,
-            serverDao: ServerDaoWrapper<QUERY, ENTITY, SERVER_WRITE_RESULT>,
-            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT,
-            remoteAccessManager: RemoteAccessManager = RemoteAccessManager(
-                3000
-            ),
-            queryToHash: QueryToHash<QUERY> = { it.toString() }
-        ): RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WRITE_RESULT> =
-            build(
-                coroutineContext = coroutineContext,
-                selectFlowFromCache = cacheDao::selectFlow,
-                selectRawFromCache = cacheDao::selectRaw,
-                selectRawFromServer = serverDao::select,
-                upsertToCache = cacheDao::upsert,
-                upsertToServer = serverDao::upsert,
-                deleteFromCache = cacheDao::delete,
-                deleteFromServer = serverDao::delete,
-                onErrorReturn = onErrorReturn,
-                remoteAccessManager = remoteAccessManager,
-                queryToHash = queryToHash
-            )
+        fun <QUERY, ENTITY, READ_RESULT> builder(
+            cacheDaoWrapper: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT>,
+            selectOnlyServerDaoWrapper: SelectOnlyServerDaoWrapper<QUERY, ENTITY>,
+            onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT
+        ) = Builder(
+            cacheDaoWrapper = cacheDaoWrapper,
+            serverDaoWrapper = selectOnlyServerDaoWrapper.toServerDaoWrapper(),
+            onErrorReturn = onErrorReturn
+        )
     }
 
-    private val mutexManager = MutexManager(queryToHash)
+    class Builder<QUERY, ENTITY, READ_RESULT> internal constructor(
+        private val cacheDaoWrapper: CacheDaoWrapper<QUERY, ENTITY, READ_RESULT>,
+        private val serverDaoWrapper: ServerDaoWrapper<QUERY, ENTITY>,
+        private val onErrorReturn: (READ_RESULT, Throwable) -> READ_RESULT
+    ) {
+        var coroutineContext: CoroutineContext = GlobalScope.coroutineContext + Dispatchers.IO
+        var remoteAccessManager: RemoteAccessManager = RemoteAccessManager(
+            3000
+        )
+        var selectQueryToHash: QueryToHash<QUERY> = { it.toString() }
+
+        fun build(): RepositoryHelper<QUERY, ENTITY, READ_RESULT> {
+            return RepositoryHelper(
+                cacheDaoWrapper = cacheDaoWrapper,
+                serverDaoWrapper = serverDaoWrapper,
+                onErrorReturn = onErrorReturn,
+                coroutineContext = coroutineContext,
+                remoteAccessManager = remoteAccessManager,
+                selectQueryToHash = selectQueryToHash
+            )
+        }
+    }
+
+    private val mutexManager = MutexManager(selectQueryToHash)
 
     fun select(query: QUERY): Flow<READ_RESULT> {
-        val cacheFlow = selectFlowFromCache(query)
+        val cacheFlow = cacheDaoWrapper.selectFlow(query)
 
-        val queryHash = queryToHash(query)
+        val queryHash = selectQueryToHash(query)
         val requestError = accessServer(query, queryHash)
 
         return mergeCacheAndRemote(cacheFlow, requestError)
@@ -142,13 +103,14 @@ class RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WR
             }
             if (canAccessNow) {
                 runCatching {
-                    val entity = selectRawFromServer(query).also {
+                    val entity = serverDaoWrapper.select(query).also {
                         RhLog.d { "accessServer: entity=$it" }
                     }
+
                     if (entity != null) {
-                        upsertToCache(entity)
+                        cacheDaoWrapper.upsert(entity)
                     } else {
-                        deleteFromCache(query)
+                        cacheDaoWrapper.deleteByQuery(query)
                     }
                     remoteAccessManager.logAccess(hash)
                 }.onFailure { t ->
@@ -175,22 +137,38 @@ class RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WR
         }
     }
 
-    suspend fun upsert(query: QUERY, newValue: ENTITY): CACHE_WRITE_RESULT {
+    suspend fun refresh(refreshTargetQuery: QUERY) {
+        try {
+            val newValue = serverDaoWrapper.select(refreshTargetQuery)
+            if (newValue != null) {
+                cacheDaoWrapper.upsert(newValue)
+            } else {
+                cacheDaoWrapper.deleteByQuery(refreshTargetQuery)
+            }
+        } catch (t: Throwable) {
+            throw RepositoryHelperException(
+                "refresh failed. refreshTargetQuery=$refreshTargetQuery",
+                t
+            )
+        }
+    }
+
+    suspend fun upsert(query: QUERY, newValue: ENTITY) {
         val mutex = mutexManager.get(query)
         mutex.withLock {
-            val backup = selectRawFromCache(query)
+            val backup = cacheDaoWrapper.selectRaw(query)
 
-            val result = upsertToCache(newValue)
+            val result = cacheDaoWrapper.upsert(newValue)
 
             return try {
-                upsertToServer(newValue)
+                serverDaoWrapper.upsert(newValue)
                 result
             } catch (t: Throwable) {
                 RhLog.d { "upsert: backup=$backup, t=$t" }
                 if (backup != null) {
-                    upsertToCache(backup)
+                    cacheDaoWrapper.upsert(backup)
                 } else {
-                    deleteFromCache(query)
+                    cacheDaoWrapper.deleteByQuery(query)
                 }
                 throw RepositoryHelperException("upsert failed. query=$query,newValue=$newValue", t)
             }
@@ -199,23 +177,31 @@ class RepositoryHelper<QUERY, ENTITY, READ_RESULT, CACHE_WRITE_RESULT, SERVER_WR
 
     suspend fun delete(
         query: QUERY
-    ): CACHE_WRITE_RESULT {
+    ) {
         val mutex = mutexManager.get(query)
         mutex.withLock {
-            val backup = selectRawFromCache(query)
+            val backup = cacheDaoWrapper.selectRaw(query)
 
-            val result = deleteFromCache(query)
+            val result = cacheDaoWrapper.deleteByQuery(query)
 
             return try {
-                deleteFromServer(query)
+                serverDaoWrapper.deleteByQuery(query)
                 result
             } catch (t: Throwable) {
                 RhLog.d { "delete: backup=$backup, t=$t" }
                 if (backup != null) {
-                    upsertToCache(backup)
+                    cacheDaoWrapper.upsert(backup)
                 }
                 throw RepositoryHelperException("delete failed. query=$query", t)
             }
         }
     }
+}
+
+fun <ENTITY, READ_RESULT> RepositoryHelper<Unit, ENTITY, READ_RESULT>.select(): Flow<READ_RESULT> {
+    return select(Unit)
+}
+
+suspend fun <ENTITY, READ_RESULT> RepositoryHelper<Unit, ENTITY, READ_RESULT>.refresh() {
+    return refresh(Unit)
 }
