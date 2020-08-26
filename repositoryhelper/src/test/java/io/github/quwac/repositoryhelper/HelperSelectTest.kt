@@ -4,6 +4,8 @@ package io.github.quwac.repositoryhelper
 
 import android.os.Build
 import com.google.common.truth.Truth.assertThat
+import io.github.quwac.repositoryhelper.daowrap.CacheDaoWrapper
+import io.github.quwac.repositoryhelper.daowrap.SelectOnlyServerDaoWrapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -41,37 +43,28 @@ class HelperSelectTest {
         val cache = UserDaoImpl(OLD, 100, "cache")
         val server = UserDaoImpl(NEW, 0, "server")
 
-        val user = RepositoryHelper.build(
-            cacheDao = object : DefaultCacheDaoWrapper<Long, User, Result<User>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     cache.selectUser(query).toResult()
 
                 override suspend fun selectRaw(query: Long): User? =
                     throw UnsupportedOperationException()
 
-                override suspend fun upsert(entity: User) = cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) = cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) = cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserSuspend(query)
                 }
-
-                override suspend fun upsert(entity: User) {
-                    throw UnsupportedOperationException()
-                }
-
-                override suspend fun delete(query: Long) {
-                    throw UnsupportedOperationException()
-                }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -97,37 +90,28 @@ class HelperSelectTest {
         val cache = UserDaoImpl(OLD, 100, "cache")
         val server = UserDaoImpl(null, 0, "server")
 
-        val user = RepositoryHelper.build(
-            cacheDao = object : DefaultCacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
                 override suspend fun selectRaw(query: Long): User? =
                     throw UnsupportedOperationException()
 
-                override suspend fun upsert(entity: User) = cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) = cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) = cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserNullableSuspend(query)
                 }
-
-                override suspend fun upsert(entity: User) {
-                    throw UnsupportedOperationException()
-                }
-
-                override suspend fun delete(query: Long) {
-                    throw UnsupportedOperationException()
-                }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -153,37 +137,29 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val server = UserDaoImpl(NEW, 0, "server")
 
-        val user = RepositoryHelper.build(
-            cacheDao = object : DefaultCacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
                 override suspend fun selectRaw(query: Long): User? =
                     throw UnsupportedOperationException()
 
-                override suspend fun upsert(entity: User) = cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) = cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) = cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserSuspend(query)
                 }
 
-                override suspend fun upsert(entity: User) {
-                    throw UnsupportedOperationException()
-                }
-
-                override suspend fun delete(query: Long) {
-                    throw UnsupportedOperationException()
-                }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -210,37 +186,28 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val server = UserDaoImpl(null, 0, "server")
 
-        val user = RepositoryHelper.build(
-            cacheDao = object : DefaultCacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
                 override suspend fun selectRaw(query: Long): User? =
                     throw UnsupportedOperationException()
 
-                override suspend fun upsert(entity: User) = cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) = cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) = cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserNullableSuspend(query)
                 }
-
-                override suspend fun upsert(entity: User) {
-                    throw UnsupportedOperationException()
-                }
-
-                override suspend fun delete(query: Long) {
-                    throw UnsupportedOperationException()
-                }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -266,37 +233,29 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val t = RuntimeException()
 
-        val user = RepositoryHelper.build(
-            cacheDao = object : DefaultCacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
                 override suspend fun selectRaw(query: Long): User? =
                     throw UnsupportedOperationException()
 
-                override suspend fun upsert(entity: User) = cache.upsertUsers(entity)
+                override suspend fun upsert(entity: User) = cache.upsertUsers(entity).toUnit()
 
-                override suspend fun delete(query: Long) = cache.deleteUsers(query)
+                override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDao = object : DefaultServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     throw t
-                }
-
-                override suspend fun upsert(entity: User) {
-                    throw UnsupportedOperationException()
-                }
-
-                override suspend fun delete(query: Long) {
-                    throw UnsupportedOperationException()
                 }
             },
             onErrorReturn = { result, e ->
                 onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ).build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
