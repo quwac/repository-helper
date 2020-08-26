@@ -9,6 +9,7 @@ import io.github.quwac.repositoryhelper.daowrap.SelectOnlyServerDaoWrapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -42,8 +43,8 @@ class HelperSelectTest {
         val cache = UserDaoImpl(OLD, 100, "cache")
         val server = UserDaoImpl(NEW, 0, "server")
 
-        val user = RepositoryHelperImpl.buildSelectOnly(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     cache.selectUser(query).toResult()
 
@@ -55,16 +56,15 @@ class HelperSelectTest {
                 override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDaoWrapper = object : SelectOnlyServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserSuspend(query)
                 }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -90,8 +90,8 @@ class HelperSelectTest {
         val cache = UserDaoImpl(OLD, 100, "cache")
         val server = UserDaoImpl(null, 0, "server")
 
-        val user = RepositoryHelperImpl.buildSelectOnly(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
@@ -103,16 +103,15 @@ class HelperSelectTest {
                 override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDaoWrapper = object : SelectOnlyServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserNullableSuspend(query)
                 }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -138,8 +137,8 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val server = UserDaoImpl(NEW, 0, "server")
 
-        val user = RepositoryHelperImpl.buildSelectOnly(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
@@ -151,17 +150,16 @@ class HelperSelectTest {
                 override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDaoWrapper = object : SelectOnlyServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserSuspend(query)
                 }
 
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -188,8 +186,8 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val server = UserDaoImpl(null, 0, "server")
 
-        val user = RepositoryHelperImpl.buildSelectOnly(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
@@ -201,16 +199,15 @@ class HelperSelectTest {
                 override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDaoWrapper = object : SelectOnlyServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     return server.selectUserNullableSuspend(query)
                 }
-            },
-            onErrorReturn = { result, e ->
-                onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ) { result, e ->
+            onErrorResultReturn(result, e)
+        }.build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {
@@ -236,8 +233,8 @@ class HelperSelectTest {
         val cache = UserDaoImpl(null, 100, "cache")
         val t = RuntimeException()
 
-        val user = RepositoryHelperImpl.buildSelectOnly(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User?>> {
+        val user = RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User?>> {
                 override fun selectFlow(query: Long): Flow<Result<User?>> =
                     cache.selectUserNullable(query).toResult()
 
@@ -249,7 +246,7 @@ class HelperSelectTest {
                 override suspend fun deleteByQuery(query: Long) = cache.deleteUsers(query).toUnit()
 
             },
-            serverDaoWrapper = object : SelectOnlyServerDaoWrapper<Long, User> {
+            object : SelectOnlyServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? {
                     delay(1000)
                     throw t
@@ -258,7 +255,7 @@ class HelperSelectTest {
             onErrorReturn = { result, e ->
                 onErrorResultReturn(result, e)
             }
-        ).select(0)
+        ).build().select(0)
 
         val actual = mutableListOf<Result<User?>>()
         val job = launch(Dispatchers.IO) {

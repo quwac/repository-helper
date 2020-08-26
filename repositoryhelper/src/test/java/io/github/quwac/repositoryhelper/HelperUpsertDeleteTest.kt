@@ -42,8 +42,8 @@ class HelperUpsertDeleteTest {
 
         val user = NEW
 
-        val upsertResult = RepositoryHelperImpl.build(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+        RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     throw UnsupportedOperationException()
 
@@ -56,7 +56,7 @@ class HelperUpsertDeleteTest {
                 override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
             },
-            serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+            object : ServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? =
                     throw UnsupportedOperationException()
 
@@ -66,11 +66,10 @@ class HelperUpsertDeleteTest {
                 override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
 
-            },
-            onErrorReturn = { _, _ ->
-                throw UnsupportedOperationException()
             }
-        ).upsert(user.id, user)
+        ) { _, _ ->
+            throw UnsupportedOperationException()
+        }.build().upsert(user.id, user)
 
         assertThat(cache.selectUserNullableSuspend(user.id)).isEqualTo(user)
         assertThat(server.selectUserNullableSuspend(user.id)).isEqualTo(user)
@@ -83,8 +82,8 @@ class HelperUpsertDeleteTest {
 
         val user = NEW
 
-        val upsertResult = RepositoryHelperImpl.build(
-            cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+        RepositoryHelper.builder(
+            object : CacheDaoWrapper<Long, User, Result<User>> {
                 override fun selectFlow(query: Long): Flow<Result<User>> =
                     throw UnsupportedOperationException()
 
@@ -97,7 +96,7 @@ class HelperUpsertDeleteTest {
                 override suspend fun deleteByQuery(query: Long) =
                     cache.deleteUsers(query).toUnit()
             },
-            serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+            object : ServerDaoWrapper<Long, User> {
                 override suspend fun select(query: Long): User? =
                     throw UnsupportedOperationException()
 
@@ -107,11 +106,10 @@ class HelperUpsertDeleteTest {
                 override suspend fun deleteByQuery(query: Long) =
                     throw UnsupportedOperationException()
 
-            },
-            onErrorReturn = { _, _ ->
-                throw UnsupportedOperationException()
             }
-        ).upsert(user.id, user)
+        ) { _, _ ->
+            throw UnsupportedOperationException()
+        }.build().upsert(user.id, user)
 
         assertThat(cache.selectUserNullableSuspend(user.id)).isEqualTo(user)
         assertThat(server.selectUserNullableSuspend(user.id)).isEqualTo(user)
@@ -126,8 +124,8 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val upsertResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -140,7 +138,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -152,11 +150,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).upsert(user.id, user)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().upsert(user.id, user)
         }
 
         val actual = mutableListOf<User?>()
@@ -189,8 +186,8 @@ class HelperUpsertDeleteTest {
         val user = NEW
 
         val upsertResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -203,7 +200,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         cache.deleteUsers(query).toUnit()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -214,11 +211,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         throw UnsupportedOperationException()
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).upsert(user.id, user)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().upsert(user.id, user)
         }
 
         val actual = mutableListOf<User?>()
@@ -248,8 +244,8 @@ class HelperUpsertDeleteTest {
         val server = UserDaoImpl(OLD, 0, "server")
 
         val deleteResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -262,7 +258,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         cache.deleteUsers(query).toUnit()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -272,11 +268,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         server.deleteUsers(query).toUnit()
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).delete(OLD.id)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().delete(OLD.id)
         }
 
         var result = true
@@ -302,8 +297,8 @@ class HelperUpsertDeleteTest {
         val server = UserDaoImpl(null, 0, "server")
 
         val deleteResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -316,7 +311,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         cache.deleteUsers(query).toUnit()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -326,11 +321,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         server.deleteUsers(query).toUnit()
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).delete(OLD.id)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().delete(OLD.id)
         }
 
         var result = true
@@ -357,8 +351,8 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val deleteResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -371,7 +365,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         cache.deleteUsers(query).toUnit()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -381,11 +375,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         throw t
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).delete(OLD.id)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().delete(OLD.id)
         }
 
         val actual = mutableListOf<User?>()
@@ -418,8 +411,8 @@ class HelperUpsertDeleteTest {
         val t = RuntimeException()
 
         val deleteResultFunc = suspend {
-            RepositoryHelperImpl.build(
-                cacheDaoWrapper = object : CacheDaoWrapper<Long, User, Result<User>> {
+            RepositoryHelper.builder(
+                object : CacheDaoWrapper<Long, User, Result<User>> {
                     override fun selectFlow(query: Long): Flow<Result<User>> =
                         throw UnsupportedOperationException()
 
@@ -432,7 +425,7 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         cache.deleteUsers(query).toUnit()
                 },
-                serverDaoWrapper = object : ServerDaoWrapper<Long, User> {
+                object : ServerDaoWrapper<Long, User> {
                     override suspend fun select(query: Long): User? =
                         throw UnsupportedOperationException()
 
@@ -442,11 +435,10 @@ class HelperUpsertDeleteTest {
                     override suspend fun deleteByQuery(query: Long) =
                         throw t
 
-                },
-                onErrorReturn = { _, _ ->
-                    throw UnsupportedOperationException()
                 }
-            ).delete(OLD.id)
+            ) { _, _ ->
+                throw UnsupportedOperationException()
+            }.build().delete(OLD.id)
         }
 
         val actual = mutableListOf<User?>()
